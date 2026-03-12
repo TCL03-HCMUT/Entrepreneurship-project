@@ -15,18 +15,26 @@ def get_db():
 def init_db():
     with app.app_context():
         db = get_db()
+        # CHANGED: Replaced 'username' with 'email'
         db.execute('''CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, 
-                        password TEXT NOT NULL, is_premium INTEGER DEFAULT 0)''')
-        # UPDATED: Added category and image_url columns
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        email TEXT UNIQUE NOT NULL, 
+                        password TEXT NOT NULL)''')
+                        
+        # CHANGED: Added 'is_promoted' column to items
         db.execute('''CREATE TABLE IF NOT EXISTS items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, 
-                        category TEXT NOT NULL, price TEXT NOT NULL, contact TEXT NOT NULL, 
-                        image_url TEXT, user_id INTEGER, 
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        title TEXT NOT NULL, 
+                        category TEXT NOT NULL, 
+                        price TEXT NOT NULL, 
+                        contact TEXT NOT NULL, 
+                        image_url TEXT, 
+                        is_promoted INTEGER DEFAULT 0,
+                        user_id INTEGER, 
                         FOREIGN KEY(user_id) REFERENCES users(id))''')
         db.commit()
 
-# --- UPGRADED HTML TEMPLATES ---
+# --- HTML TEMPLATES ---
 BASE_HTML = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -39,12 +47,12 @@ BASE_HTML = '''
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .hcmut-bg { background-color: #003399; }
         .hcmut-text { color: #003399; }
-        /* NEW: Hover effect for cards */
         .item-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .item-card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
-        /* NEW: Fixed image heights so cards align perfectly */
         .card-img-top { height: 200px; object-fit: cover; }
         .no-img-placeholder { height: 200px; background-color: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        /* NEW: Styling for Promoted Items */
+        .promoted-card { border: 2px solid #ffc107 !important; box-shadow: 0 0 10px rgba(255, 193, 7, 0.3); }
     </style>
 </head>
 <body>
@@ -54,27 +62,24 @@ BASE_HTML = '''
             <div class="d-flex align-items-center">
                 <a class="nav-link text-white me-3" href="/">Market</a>
                 {% if session.user_id %}
-                    <a class="nav-link text-white me-3" href="/add">Sell Item</a>
-                    {% if session.is_premium == 0 %}
-                        <a class="btn btn-warning btn-sm fw-bold me-3" href="/upgrade">⭐ Upgrade</a>
-                    {% else %}
-                        <span class="badge bg-warning text-dark me-3 fs-6">⭐ Premium</span>
-                    {% endif %}
-                    <a class="nav-link text-white opacity-75" href="/logout">Logout ({{ session.username }})</a>
+                    <a class="btn btn-light btn-sm fw-bold me-3 text-primary" href="/add">+ Sell Item</a>
+                    <a class="nav-link text-white opacity-75" href="/logout">Logout ({{ session.email.split('@')[0] }})</a>
                 {% else %}
                     <a class="nav-link text-white me-3" href="/login">Login</a>
-                    <a class="btn btn-outline-light btn-sm" href="/register">Register</a>
+                    <a class="btn btn-outline-light btn-sm fw-bold" href="/register">Student Register</a>
                 {% endif %}
             </div>
         </div>
     </nav>
     
     <div class="container">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <div class="alert alert-warning shadow-sm alert-dismissible fade show" role="alert">
-                <strong>Notice:</strong> {{ messages[0] }}
-            </div>
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'warning' }} shadow-sm alert-dismissible fade show" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
           {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
@@ -90,9 +95,7 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
 
     <div class="card shadow-sm border-0 mb-4 p-3 bg-white">
         <form method="GET" action="/" class="d-flex">
-            <input type="text" name="q" class="form-control bg-light me-2" 
-                   placeholder="Search for 'Giải Tích', 'Kit vi điều khiển', etc..." 
-                   value="{{ search_query }}">
+            <input type="text" name="q" class="form-control bg-light me-2" placeholder="Search for 'Giải Tích', 'Kit vi điều khiển', etc..." value="{{ search_query }}">
             <button type="submit" class="btn hcmut-bg text-white fw-bold px-4">Search</button>
             {% if search_query %}
                 <a href="/" class="btn btn-outline-secondary ms-2 fw-bold">Clear</a>
@@ -103,7 +106,7 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
     <div class="row">
         {% for item in items %}
             <div class="col-md-4 mb-4">
-                <div class="card h-100 shadow-sm border-0 item-card">
+                <div class="card h-100 shadow-sm border-0 item-card {% if item.is_promoted %}promoted-card{% endif %}">
                     {% if item.image_url %}
                         <img src="{{ item.image_url }}" class="card-img-top rounded-top" alt="{{ item.title }}">
                     {% else %}
@@ -111,7 +114,13 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
                     {% endif %}
                     
                     <div class="card-body">
-                        <span class="badge bg-primary mb-2">{{ item.category }}</span>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-primary">{{ item.category }}</span>
+                            {% if item.is_promoted %}
+                                <span class="badge bg-warning text-dark fw-bold shadow-sm">🔥 HOT ITEM</span>
+                            {% endif %}
+                        </div>
+                        
                         <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
                         <h6 class="card-subtitle mb-3 text-danger fw-bold">{{ item.price }} VND</h6>
                         <p class="card-text mb-1"><strong>Contact:</strong></p>
@@ -119,12 +128,19 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
                     </div>
                     
                     <div class="card-footer bg-white border-top-0 text-muted d-flex justify-content-between align-items-center mb-2">
-                        <small>Listed by User ID: {{ item.user_id }}</small>
+                        <small>Seller ID: {{ item.user_id }}</small>
                         
                         {% if session.user_id == item.user_id %}
-                            <form action="/delete/{{ item.id }}" method="POST" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Mark as Sold</button>
-                            </form>
+                            <div class="d-flex gap-2">
+                                {% if not item.is_promoted %}
+                                <form action="/promote/{{ item.id }}" method="POST" class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-warning fw-bold">🚀 Promote</button>
+                                </form>
+                                {% endif %}
+                                <form action="/delete/{{ item.id }}" method="POST" class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Mark Sold</button>
+                                </form>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -133,9 +149,9 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
             <div class="col-12">
                 <div class="alert alert-info bg-white border-0 shadow-sm text-center py-4">
                     {% if search_query %}
-                        <strong>No results found for "{{ search_query }}".</strong> Try a different keyword!
+                        <strong>No results found.</strong> Try a different keyword!
                     {% else %}
-                        No items listed yet. Be the first to clear out your old textbooks!
+                        No items listed yet.
                     {% endif %}
                 </div>
             </div>
@@ -147,13 +163,12 @@ ADD_ITEM_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
     <div class="row justify-content-center">
         <div class="col-md-6 mt-4 mb-5">
             <div class="card shadow-sm border-0 p-4">
-                <h3 class="hcmut-text mb-4 fw-bold">List a New Item</h3>
+                <h3 class="hcmut-text mb-4 fw-bold">List a New Item (Free!)</h3>
                 <form method="POST">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Item Name</label>
-                        <input type="text" class="form-control bg-light" name="title" placeholder="e.g., Kít thí nghiệm vi điều khiển" required>
+                        <input type="text" class="form-control bg-light" name="title" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Category</label>
                         <select class="form-select bg-light" name="category" required>
@@ -164,21 +179,17 @@ ADD_ITEM_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
                             <option value="Khác">Khác (Other)</option>
                         </select>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label fw-bold">Price (VND)</label>
-                        <input type="number" class="form-control bg-light" name="price" placeholder="50000" required>
+                        <input type="number" class="form-control bg-light" name="price" required>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Image URL (Optional)</label>
-                        <input type="url" class="form-control bg-light" name="image_url" placeholder="Paste an image link from Imgur, Drive, etc.">
-                        <div class="form-text">Paste a direct link to an image ending in .jpg or .png</div>
+                        <input type="url" class="form-control bg-light" name="image_url">
                     </div>
-
                     <div class="mb-4">
                         <label class="form-label fw-bold">Contact Info</label>
-                        <input type="text" class="form-control bg-light" name="contact" placeholder="Zalo / Phone / Student Email" required>
+                        <input type="text" class="form-control bg-light" name="contact" required>
                     </div>
                     <button type="submit" class="btn hcmut-bg text-white w-100 fw-bold py-2">Post Listing</button>
                 </form>
@@ -194,8 +205,11 @@ AUTH_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
                 <h3 class="hcmut-text text-center mb-4 fw-bold">{{ action }}</h3>
                 <form method="POST">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Username</label>
-                        <input type="text" class="form-control bg-light" name="username" required>
+                        <label class="form-label fw-bold">Student Email</label>
+                        <input type="email" class="form-control bg-light" name="email" placeholder="sv@hcmut.edu.vn" required>
+                        {% if action == 'Register' %}
+                            <div class="form-text text-success fw-bold">Must end with @hcmut.edu.vn</div>
+                        {% endif %}
                     </div>
                     <div class="mb-4">
                         <label class="form-label fw-bold">Password</label>
@@ -213,54 +227,56 @@ AUTH_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
 @app.route('/')
 def index():
     db = get_db()
-    
-    # 1. Grab the search term from the URL (defaults to empty string if none)
     search_query = request.args.get('q', '').strip()
     
+    # NEW: Items are now ordered by is_promoted DESC first, then by ID. 
+    # This guarantees paid/bumped items sit at the very top of the page.
     if search_query:
-        # 2. If there is a search, use SQL 'LIKE' to find matching titles or categories
-        # The '%' signs act as wildcards so "tích" will match "Giải Tích 1"
         wildcard_query = f"%{search_query}%"
         items = db.execute('''
             SELECT * FROM items 
             WHERE title LIKE ? OR category LIKE ? 
-            ORDER BY id DESC
+            ORDER BY is_promoted DESC, id DESC
         ''', (wildcard_query, wildcard_query)).fetchall()
     else:
-        # 3. If no search, just load everything normally
-        items = db.execute('SELECT * FROM items ORDER BY id DESC').fetchall()
+        items = db.execute('SELECT * FROM items ORDER BY is_promoted DESC, id DESC').fetchall()
         
-    # Pass the search_query back to the template so it stays in the search box
     return render_template_string(MARKET_HTML, items=items, search_query=search_query)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email'].strip().lower()
         password = request.form['password']
+        
+        # NEW: Absolute Trust Validation! Block non-HCMUT emails.
+        if not email.endswith('@hcmut.edu.vn'):
+            flash('Registration denied. You must use a valid @hcmut.edu.vn student email address.', 'danger')
+            return redirect(url_for('register'))
+
         db = get_db()
         try:
-            db.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+            db.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, password))
             db.commit()
-            flash('Registration successful! Please log in.')
+            flash('Registration successful! Welcome to the marketplace.', 'success')
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash('Username already exists.')
+            flash('This email is already registered.', 'danger')
     return render_template_string(AUTH_HTML, action="Register")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email'].strip().lower()
         password = request.form['password']
         db = get_db()
-        user = db.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        user = db.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
         if user:
             session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['is_premium'] = user['is_premium']
+            session['email'] = user['email']
             return redirect(url_for('index'))
         else:
-            flash('Invalid credentials.')
+            flash('Invalid credentials.', 'danger')
     return render_template_string(AUTH_HTML, action="Login")
 
 @app.route('/logout')
@@ -271,16 +287,10 @@ def logout():
 @app.route('/add', methods=['GET', 'POST'])
 def add_item():
     if 'user_id' not in session:
-        flash('Please login to sell items.')
+        flash('Please login to sell items.', 'warning')
         return redirect(url_for('login'))
 
-    db = get_db()
-    
-    if session.get('is_premium') == 0:
-        item_count = db.execute('SELECT COUNT(*) FROM items WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
-        if item_count >= 2:
-            flash('Free tier limit reached (Max 2 items). Please upgrade to Premium to list more!')
-            return redirect(url_for('index'))
+    # NEW: The 2-item freemium limit is completely gone! Users can list endlessly to build your supply.
 
     if request.method == 'POST':
         title = request.form['title']
@@ -289,41 +299,39 @@ def add_item():
         image_url = request.form['image_url']
         contact = request.form['contact']
         
-        # UPDATED: Insert statement now handles category and image_url
+        db = get_db()
         db.execute('INSERT INTO items (title, category, price, image_url, contact, user_id) VALUES (?, ?, ?, ?, ?, ?)', 
                    (title, category, price, image_url, contact, session['user_id']))
         db.commit()
-        flash('Item listed successfully!')
+        flash('Item listed successfully! It is live on the market.', 'success')
         return redirect(url_for('index'))
         
     return render_template_string(ADD_ITEM_HTML)
 
-@app.route('/upgrade')
-def upgrade():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    db = get_db()
-    db.execute('UPDATE users SET is_premium = 1 WHERE id = ?', (session['user_id'],))
-    db.commit()
-    session['is_premium'] = 1
-    flash('Boom! You are now a Premium user. List as many items as you want.')
-    return redirect(url_for('index'))
-
 @app.route('/delete/<int:item_id>', methods=['POST'])
 def delete_item(item_id):
-    # 1. Make sure the user is logged in
     if 'user_id' not in session:
-        flash('Please login to manage your items.')
         return redirect(url_for('login'))
-
     db = get_db()
-    
-    # 2. Delete the item ONLY if the ID matches AND it belongs to the current user
     db.execute('DELETE FROM items WHERE id = ? AND user_id = ?', (item_id, session['user_id']))
     db.commit()
+    flash('Item marked as sold!', 'success')
+    return redirect(url_for('index'))
+
+# NEW: Route to handle the "Promote" micro-transaction
+@app.route('/promote/<int:item_id>', methods=['POST'])
+def promote_item(item_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     
-    flash('Item marked as sold and removed from the market.')
+    db = get_db()
+    # In a real app, this is where you would redirect them to MoMo or VNPay API.
+    # For the MVP, we assume they paid the 10,000 VND and update the database immediately.
+    
+    db.execute('UPDATE items SET is_promoted = 1 WHERE id = ? AND user_id = ?', (item_id, session['user_id']))
+    db.commit()
+    
+    flash('Payment successful! Your item is now Promoted to the top of the page.', 'success')
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
