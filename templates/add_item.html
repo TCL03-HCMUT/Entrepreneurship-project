@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 mt-4 mb-5">
+        <div class="card shadow-sm border-0 p-4">
+            <h3 class="hcmut-text mb-4 fw-bold">List a New Item</h3>
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Item Name</label>
+                    <input type="text" class="form-control bg-light" name="title" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Category</label>
+                    <select class="form-select bg-light" name="category" required>
+                        <option value="Sách Đại Cương">Sách Đại Cương</option>
+                        <option value="Sách Chuyên Ngành">Sách Chuyên Ngành</option>
+                        <option value="Linh Kiện Điện Tử">Linh Kiện Điện Tử</option>
+                        <option value="Dụng Cụ Học Tập">Dụng Cụ Học Tập</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Price (VND)</label>
+                    <input type="number" class="form-control bg-light" name="price" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Image URL (Optional)</label>
+                    <input type="url" class="form-control bg-light" name="image_url">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Contact Info</label>
+                    <input type="text" class="form-control bg-light" name="contact" required>
+                </div>
+                <button type="submit" class="btn hcmut-bg text-white w-100 fw-bold py-2">Post Listing</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

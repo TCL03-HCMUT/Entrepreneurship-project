@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if notifications %}
+    <div class="alert alert-success shadow-sm border-0 mb-4">
+        <h6 class="fw-bold">Wishlist Keyword Matches Found!</h6>
+        <ul class="mb-0">
+            {% for note in notifications %}<li>{{ note }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="hcmut-text fw-bold m-0">Available Materials & Books</h2>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 p-3 bg-white">
+        <form method="GET" action="/" class="row g-2">
+            <div class="col-md-8">
+                <input type="text" name="q" class="form-control bg-light" placeholder="Search for 'Giải Tích'..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-4 d-flex">
+                <button type="submit" class="btn hcmut-bg text-white fw-bold flex-grow-1">Search</button>
+                {% if search_query %}<a href="/" class="btn btn-outline-secondary ms-2 fw-bold">Clear</a>{% endif %}
+            </div>
+        </form>
+        {% if search_query and session.user_id %}
+        <div class="mt-2 text-end">
+            <form action="/add_alert" method="POST" class="d-inline">
+                <input type="hidden" name="keyword" value="{{ search_query }}">
+                <button type="submit" class="btn btn-link btn-sm text-decoration-none p-0">+ Track "{{ search_query }}" in Wishlist</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm border-0 item-card">
+                    {% if item.image_url %}<img src="{{ item.image_url }}" class="card-img-top rounded-top">
+                    {% else %}<div class="no-img-placeholder rounded-top">No Image Provided</div>{% endif %}
+                    <div class="card-body">
+                        <span class="badge bg-primary mb-2">{{ item.category }}</span>
+                        <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
+                        <h6 class="card-subtitle mb-3 text-danger fw-bold">{{ item.price }} VND</h6>
+                        <p class="card-text mb-1"><strong>Contact:</strong></p>
+                        <span class="badge bg-secondary fs-6">{{ item.contact }}</span>
+                    </div>
+                    <div class="card-footer bg-white border-top-0 text-muted d-flex justify-content-between align-items-center mb-2">
+                        <small>Listed by User ID: {{ item.user_id }}</small>
+                        {% if session.user_id %}
+                            {% if session.user_id == item.user_id %}
+                                <form action="/delete/{{ item.id }}" method="POST" class="m-0"><button type="submit" class="btn btn-sm btn-outline-danger">Mark as Sold</button></form>
+                            {% else %}
+                                <form action="/wishlist/add/{{ item.id }}" method="POST" class="m-0"><button type="submit" class="btn btn-sm btn-outline-primary">❤️ Save</button></form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12"><div class="alert alert-info bg-white border-0 shadow-sm text-center py-4">No items found.</div></div>
+        {% endfor %}
+    </div>
+{% endblock %}

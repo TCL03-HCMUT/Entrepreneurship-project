@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 mt-5">
+        <div class="card shadow border-0 p-4">
+            <h3 class="hcmut-text text-center mb-4 fw-bold">Login</h3>
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Username</label>
+                    <input type="text" class="form-control bg-light" name="username" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Password</label>
+                    <input type="password" class="form-control bg-light" name="password" required>
+                </div>
+                <button type="submit" class="btn hcmut-bg text-white w-100 fw-bold py-2">Login</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
