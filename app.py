@@ -15,7 +15,6 @@ def get_db():
 def init_db():
     with app.app_context():
         db = get_db()
-        # UPDATED: Added email column to users table
         db.execute('''CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
                         username TEXT UNIQUE NOT NULL, 
@@ -35,16 +34,24 @@ def init_db():
                         keyword TEXT, 
                         category TEXT,
                         FOREIGN KEY(user_id) REFERENCES users(id))''')
+                        
+        db.execute('''CREATE TABLE IF NOT EXISTS wishlist (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        user_id INTEGER, 
+                        item_id INTEGER,
+                        FOREIGN KEY(user_id) REFERENCES users(id),
+                        FOREIGN KEY(item_id) REFERENCES items(id),
+                        UNIQUE(user_id, item_id))''')
         db.commit()
 
-# --- UPGRADED HTML TEMPLATES ---
+# --- HTML TEMPLATES ---
 BASE_HTML = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HCMUT Trade</title>
+    <title>Bách Khoa Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -63,6 +70,7 @@ BASE_HTML = '''
             <div class="d-flex align-items-center">
                 <a class="nav-link text-white me-3" href="/">Market</a>
                 {% if session.user_id %}
+                    <a class="nav-link text-white me-3" href="/wishlist">Wishlist</a>
                     <a class="nav-link text-white me-3" href="/add">Sell Item</a>
                     {% if session.is_premium == 0 %}
                         <a class="btn btn-warning btn-sm fw-bold me-3" href="/upgrade">⭐ Upgrade</a>
@@ -95,7 +103,7 @@ BASE_HTML = '''
 MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
     {% if notifications %}
     <div class="alert alert-success shadow-sm border-0 mb-4">
-        <h6 class="fw-bold">Wishlist Matches Found!</h6>
+        <h6 class="fw-bold">Wishlist Keyword Matches Found!</h6>
         <ul class="mb-0">
             {% for note in notifications %}
                 <li>{{ note }}</li>
@@ -127,7 +135,7 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
             <form action="/add_alert" method="POST" class="d-inline">
                 <input type="hidden" name="keyword" value="{{ search_query }}">
                 <button type="submit" class="btn btn-link btn-sm text-decoration-none p-0">
-                    + Create alert for "{{ search_query }}"
+                    + Track "{{ search_query }}" in Wishlist
                 </button>
             </form>
         </div>
@@ -155,10 +163,16 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
                     <div class="card-footer bg-white border-top-0 text-muted d-flex justify-content-between align-items-center mb-2">
                         <small>Listed by User ID: {{ item.user_id }}</small>
                         
-                        {% if session.user_id == item.user_id %}
-                            <form action="/delete/{{ item.id }}" method="POST" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Mark as Sold</button>
-                            </form>
+                        {% if session.user_id %}
+                            {% if session.user_id == item.user_id %}
+                                <form action="/delete/{{ item.id }}" method="POST" class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Mark as Sold</button>
+                                </form>
+                            {% else %}
+                                <form action="/wishlist/add/{{ item.id }}" method="POST" class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">❤️ Save</button>
+                                </form>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -177,7 +191,86 @@ MARKET_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
     </div>
 ''')
 
-# UPDATED: Added email field to register form
+# UPDATED: Added tracked keywords functionality to the Wishlist UI
+WISHLIST_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
+    {% if notifications %}
+    <div class="alert alert-success shadow-sm border-0 mb-4">
+        <h6 class="fw-bold">Wishlist Keyword Matches Found!</h6>
+        <ul class="mb-0">
+            {% for note in notifications %}
+                <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="hcmut-text fw-bold m-0">Tracked Keywords</h3>
+    </div>
+    
+    <div class="card shadow-sm border-0 mb-5 p-3 bg-white">
+        <form action="/add_alert" method="POST" class="row g-2 mb-3">
+            <div class="col-md-9">
+                <input type="text" name="keyword" class="form-control bg-light" placeholder="Enter a keyword to track (e.g., Mac OS, Giải Tích)" required>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn hcmut-bg text-white fw-bold w-100">Add Keyword</button>
+            </div>
+        </form>
+        
+        <ul class="list-group list-group-flush">
+            {% for alert in alerts %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <span class="fw-bold">🔍 {{ alert.keyword }}</span>
+                <form action="/remove_alert/{{ alert.id }}" method="POST" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                </form>
+            </li>
+            {% else %}
+            <div class="text-muted text-center mt-2">You are not tracking any keywords yet.</div>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="hcmut-text fw-bold m-0">Saved Items</h3>
+    </div>
+    
+    <div class="row">
+        {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm border-0 item-card">
+                    {% if item.image_url %}
+                        <img src="{{ item.image_url }}" class="card-img-top rounded-top" alt="{{ item.title }}">
+                    {% else %}
+                        <div class="no-img-placeholder rounded-top">No Image Provided</div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <span class="badge bg-primary mb-2">{{ item.category }}</span>
+                        <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
+                        <h6 class="card-subtitle mb-3 text-danger fw-bold">{{ item.price }} VND</h6>
+                        <p class="card-text mb-1"><strong>Contact:</strong></p>
+                        <span class="badge bg-secondary fs-6">{{ item.contact }}</span>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center mb-2">
+                        <form action="/wishlist/remove/{{ item.id }}" method="POST" class="m-0 w-100">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">Remove from Wishlist</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info bg-white border-0 shadow-sm text-center py-4">
+                    You haven't saved any specific items yet. Browse the market to add some!
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+''')
+
 REGISTER_HTML = BASE_HTML.replace('{% block content %}{% endblock %}', '''
     <div class="row justify-content-center">
         <div class="col-md-5 mt-5">
@@ -285,7 +378,7 @@ def index():
             match = db.execute('''SELECT title FROM items WHERE title LIKE ? LIMIT 1''', 
                                (f"%{alert['keyword']}%",)).fetchone()
             if match:
-                notifications.append(f"A seller just posted: {match['title']}")
+                notifications.append(f"Matching '{alert['keyword']}': {match['title']}")
         
     return render_template_string(MARKET_HTML, items=items, search_query=search_query, notifications=notifications)
 
@@ -296,7 +389,6 @@ def register():
         email = request.form['email'].lower().strip()
         password = request.form['password']
         
-        # VERIFICATION LOGIC: Check if email ends with @hcmut.edu.vn
         if not email.endswith('@hcmut.edu.vn'):
             flash('Registration failed: You must use an @hcmut.edu.vn email address.')
             return render_template_string(REGISTER_HTML)
@@ -359,21 +451,103 @@ def add_item():
         return redirect(url_for('index'))
     return render_template_string(ADD_ITEM_HTML)
 
+# --- WISHLIST & KEYWORD ALERTS ROUTES ---
+
+@app.route('/wishlist')
+def view_wishlist():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    
+    # Fetch Saved Specific Items
+    query = '''
+        SELECT i.* FROM items i 
+        JOIN wishlist w ON i.id = w.item_id 
+        WHERE w.user_id = ? 
+        ORDER BY w.id DESC
+    '''
+    items = db.execute(query, (session['user_id'],)).fetchall()
+    
+    # Fetch Tracked Keywords
+    alerts = db.execute('SELECT * FROM alerts WHERE user_id = ?', (session['user_id'],)).fetchall()
+    
+    # Generate Notifications based on tracked keywords
+    notifications = []
+    for alert in alerts:
+        match = db.execute('''SELECT title FROM items WHERE title LIKE ? LIMIT 1''', 
+                           (f"%{alert['keyword']}%",)).fetchone()
+        if match:
+            notifications.append(f"Matching '{alert['keyword']}': {match['title']}")
+            
+    return render_template_string(WISHLIST_HTML, items=items, alerts=alerts, notifications=notifications)
+
+@app.route('/wishlist/add/<int:item_id>', methods=['POST'])
+def add_to_wishlist(item_id):
+    if 'user_id' not in session:
+        flash('Please login to use the wishlist.')
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    
+    if session.get('is_premium') == 0:
+        count = db.execute('SELECT COUNT(*) FROM wishlist WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
+        if count >= 5:
+            flash('Free tier limit reached (Max 5 wishlist items). Upgrade to Premium to save more!')
+            return redirect(request.referrer or url_for('index'))
+            
+    try:
+        db.execute('INSERT INTO wishlist (user_id, item_id) VALUES (?, ?)', (session['user_id'], item_id))
+        db.commit()
+        flash('Item added to wishlist!')
+    except sqlite3.IntegrityError:
+        flash('Item is already in your wishlist.')
+        
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/wishlist/remove/<int:item_id>', methods=['POST'])
+def remove_from_wishlist(item_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    db.execute('DELETE FROM wishlist WHERE user_id = ? AND item_id = ?', (session['user_id'], item_id))
+    db.commit()
+    flash('Item removed from wishlist.')
+    
+    return redirect(request.referrer or url_for('view_wishlist'))
+
 @app.route('/add_alert', methods=['POST'])
 def add_alert():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    keyword = request.form.get('keyword')
+        
+    keyword = request.form.get('keyword').strip()
     db = get_db()
+    
     if session.get('is_premium') == 0:
         count = db.execute('SELECT COUNT(*) FROM alerts WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
         if count >= 1:
-            flash('Free users can only set 1 alert.')
-            return redirect(url_for('index'))
+            flash('Free tier limit reached (Max 1 tracked keyword). Please upgrade to Premium!')
+            return redirect(request.referrer or url_for('index'))
+            
     db.execute('INSERT INTO alerts (user_id, keyword) VALUES (?, ?)', (session['user_id'], keyword))
     db.commit()
-    flash(f'Alert saved for "{keyword}"')
-    return redirect(url_for('index'))
+    flash(f'Now tracking keyword: "{keyword}"')
+    
+    # Redirects back to the page the user submitted the form from (Index or Wishlist)
+    return redirect(request.referrer or url_for('view_wishlist'))
+
+@app.route('/remove_alert/<int:alert_id>', methods=['POST'])
+def remove_alert(alert_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    db.execute('DELETE FROM alerts WHERE id = ? AND user_id = ?', (alert_id, session['user_id']))
+    db.commit()
+    flash('Tracked keyword removed.')
+    return redirect(request.referrer or url_for('view_wishlist'))
 
 @app.route('/upgrade')
 def upgrade():
@@ -392,6 +566,7 @@ def delete_item(item_id):
         return redirect(url_for('login'))
     db = get_db()
     db.execute('DELETE FROM items WHERE id = ? AND user_id = ?', (item_id, session['user_id']))
+    db.execute('DELETE FROM wishlist WHERE item_id = ?', (item_id,))
     db.commit()
     flash('Item removed.')
     return redirect(url_for('index'))
@@ -400,12 +575,23 @@ if __name__ == '__main__':
     if not os.path.exists(DATABASE):
         init_db()
     else:
-        # Schema migration check
         db = get_db()
         try:
             db.execute('SELECT email FROM users LIMIT 1')
         except sqlite3.OperationalError:
-            # If email column is missing, add it
             db.execute('ALTER TABLE users ADD COLUMN email TEXT UNIQUE')
             db.commit()
+            
+        try:
+            db.execute('SELECT * FROM wishlist LIMIT 1')
+        except sqlite3.OperationalError:
+            db.execute('''CREATE TABLE IF NOT EXISTS wishlist (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                            user_id INTEGER, 
+                            item_id INTEGER,
+                            FOREIGN KEY(user_id) REFERENCES users(id),
+                            FOREIGN KEY(item_id) REFERENCES items(id),
+                            UNIQUE(user_id, item_id))''')
+            db.commit()
+            
     app.run(debug=True)
