@@ -1,0 +1,88 @@
+{% extends "base.html" %} {% block content %}
+<div
+  class="row justify-content-center align-items-center"
+  style="min-height: 75vh"
+>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+      <div class="text-center mb-4">
+        <div class="bg-light rounded-circle d-inline-block p-3 mb-3">
+          <i class="bi bi-person-plus hcmut-text" style="font-size: 2.5rem"></i>
+        </div>
+        <h3 class="hcmut-text fw-bold">Tạo tài khoản</h3>
+        <p class="text-muted">Tham gia cộng đồng sinh viên trao đổi đồ dùng</p>
+      </div>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted"
+            >Tên đăng nhập</label
+          >
+          <div class="input-group">
+            <span
+              class="input-group-text bg-light border-0 rounded-start-pill ps-3"
+              ><i class="bi bi-person text-muted"></i
+            ></span>
+            <input
+              type="text"
+              class="form-control bg-light border-0 rounded-end-pill py-2"
+              name="username"
+              placeholder="Nhập username"
+              required
+            />
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-muted"
+            >Email sinh viên (HCMUT)</label
+          >
+          <div class="input-group">
+            <span
+              class="input-group-text bg-light border-0 rounded-start-pill ps-3"
+              ><i class="bi bi-envelope text-muted"></i
+            ></span>
+            <input
+              type="email"
+              class="form-control bg-light border-0 rounded-end-pill py-2"
+              name="email"
+              placeholder="nguyen.van.a@hcmut.edu.vn"
+              required
+            />
+          </div>
+          <div class="form-text small ms-2">
+            <i class="bi bi-info-circle me-1"></i>Bắt buộc dùng đuôi
+            @hcmut.edu.vn
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-bold small text-muted">Mật khẩu</label>
+          <div class="input-group">
+            <span
+              class="input-group-text bg-light border-0 rounded-start-pill ps-3"
+              ><i class="bi bi-lock text-muted"></i
+            ></span>
+            <input
+              type="password"
+              class="form-control bg-light border-0 rounded-end-pill py-2"
+              name="password"
+              placeholder="Tạo mật khẩu an toàn"
+              required
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          class="btn hcmut-bg text-white w-100 rounded-pill fw-bold py-2 shadow-sm mb-3"
+        >
+          Đăng ký tài khoản
+        </button>
+        <p class="text-center text-muted small m-0">
+          Đã có tài khoản?
+          <a href="/login" class="text-decoration-none fw-bold hcmut-text"
+            >Đăng nhập</a
+          >
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

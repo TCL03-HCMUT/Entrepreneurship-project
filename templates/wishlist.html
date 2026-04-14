@@ -1,0 +1,105 @@
+{% extends "base.html" %} {% block content %} {% if notifications %}
+<div class="alert alert-success shadow-sm border-0 mb-4">
+  <h6 class="fw-bold">Wishlist Keyword Matches Found!</h6>
+  <ul class="mb-0">
+    {% for note in notifications %}
+    <li>{{ note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="hcmut-text fw-bold m-0">Tracked Keywords</h3>
+</div>
+
+<div class="card shadow-sm border-0 mb-5 p-3 bg-white">
+  <form action="/add_alert" method="POST" class="row g-2 mb-3">
+    <div class="col-md-9">
+      <input
+        type="text"
+        name="keyword"
+        class="form-control bg-light"
+        placeholder="Enter a keyword to track (e.g., Mac OS, Giải Tích)"
+        required
+      />
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn hcmut-bg text-white fw-bold w-100">
+        Add Keyword
+      </button>
+    </div>
+  </form>
+
+  <ul class="list-group list-group-flush">
+    {% for alert in alerts %}
+    <li
+      class="list-group-item d-flex justify-content-between align-items-center px-0"
+    >
+      <span class="fw-bold">🔍 {{ alert.keyword }}</span>
+      <form action="/remove_alert/{{ alert.id }}" method="POST" class="m-0">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+          Remove
+        </button>
+      </form>
+    </li>
+    {% else %}
+    <div class="text-muted text-center mt-2">
+      You are not tracking any keywords yet.
+    </div>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="hcmut-text fw-bold m-0">Saved Items</h3>
+</div>
+
+<div class="row">
+  {% for item in items %}
+  <div class="col-md-4 mb-4">
+    <div class="card h-100 shadow-sm border-0 item-card">
+      {% if item.image_url %}
+      <img
+        src="{{ item.image_url }}"
+        class="card-img-top rounded-top"
+        alt="{{ item.title }}"
+      />
+      {% else %}
+      <div class="no-img-placeholder rounded-top">No Image Provided</div>
+      {% endif %}
+
+      <div class="card-body">
+        <span class="badge bg-primary mb-2">{{ item.category }}</span>
+        <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
+        <h6 class="card-subtitle mb-3 text-danger fw-bold">
+          {{ item.price }} VND
+        </h6>
+        <p class="card-text mb-1"><strong>Contact:</strong></p>
+        <span class="badge bg-secondary fs-6">{{ item.contact }}</span>
+      </div>
+
+      <div
+        class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center mb-2"
+      >
+        <form
+          action="/wishlist/remove/{{ item.id }}"
+          method="POST"
+          class="m-0 w-100"
+        >
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+            Remove from Wishlist
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info bg-white border-0 shadow-sm text-center py-4">
+      You haven't saved any specific items yet. Browse the market to add some!
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 mt-3 mb-5">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+      <div class="card-header bg-light border-0 text-center py-4">
+        <i
+          class="bi bi-shop hcmut-text mb-2 d-block"
+          style="font-size: 2.5rem"
+        ></i>
+        <h3 class="hcmut-text fw-bold m-0">Đăng bán sản phẩm mới</h3>
+        <p class="text-muted m-0 small">
+          Điền thông tin chi tiết để sinh viên khác dễ dàng tìm thấy đồ của bạn
+        </p>
+      </div>
+      <div class="card-body p-4 p-md-5">
+        <form method="POST" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-12 mb-2">
+              <label class="form-label fw-bold text-dark">Tên sản phẩm</label>
+              <input
+                type="text"
+                class="form-control bg-light border-0 rounded-3 py-2"
+                name="title"
+                placeholder="VD: Sách Giải Tích 1 mới 99%"
+                required
+              />
+            </div>
+
+            <div class="col-md-6 mb-2">
+              <label class="form-label fw-bold text-dark">Danh mục</label>
+              <select
+                class="form-select bg-light border-0 rounded-3 py-2"
+                name="category"
+                required
+              >
+                <option value="" selected disabled>Chọn danh mục...</option>
+                <option value="Sách Đại Cương">Sách Đại Cương</option>
+                <option value="Sách Chuyên Ngành">Sách Chuyên Ngành</option>
+                <option value="Linh Kiện Điện Tử">Linh Kiện Điện Tử</option>
+                <option value="Dụng Cụ Học Tập">Dụng Cụ Học Tập</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-2">
+              <label class="form-label fw-bold text-dark">Mức giá (VND)</label>
+              <div class="input-group">
+                <input
+                  type="number"
+                  class="form-control bg-light border-0 rounded-start-3 py-2"
+                  name="price"
+                  placeholder="VD: 50000"
+                  required
+                />
+                <span
+                  class="input-group-text bg-light border-0 rounded-end-3 text-muted"
+                  >đ</span
+                >
+              </div>
+            </div>
+
+            <div class="col-12 mb-2">
+              <label class="form-label fw-bold text-dark"
+                >Tải ảnh lên (Tính năng sắp mở)</label
+              >
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0 rounded-start-3"
+                  ><i class="bi bi-camera"></i
+                ></span>
+                <input
+                  type="file"
+                  class="form-control bg-light border-0 rounded-end-3 py-2"
+                  name="image_file"
+                  accept="image/png, image/jpeg"
+                />
+              </div>
+              <input type="hidden" name="image_url" value="" />
+            </div>
+
+            <div class="col-12 mb-4">
+              <label class="form-label fw-bold text-dark"
+                >Thông tin liên hệ</label
+              >
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0 rounded-start-3"
+                  ><i class="bi bi-telephone"></i
+                ></span>
+                <input
+                  type="text"
+                  class="form-control bg-light border-0 rounded-end-3 py-2"
+                  name="contact"
+                  placeholder="Số điện thoại hoặc Link FB/Zalo"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="col-12 mt-4">
+              <button
+                type="submit"
+                class="btn hcmut-bg text-white w-100 rounded-pill fw-bold py-3 shadow-sm"
+              >
+                <i class="bi bi-send me-2"></i>Đăng lên chợ
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

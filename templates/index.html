@@ -1,0 +1,225 @@
+{% extends "base.html" %} {% block content %} {% if notifications %}
+<div class="alert alert-success shadow-sm border-0 mb-4 rounded-3">
+  <h6 class="fw-bold mb-2">
+    <i class="bi bi-bell-fill me-2"></i>Wishlist Keyword Matches Found!
+  </h6>
+  <ul class="mb-0">
+    {% for note in notifications %}
+    <li>{{ note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="p-5 text-center bg-light rounded-4 shadow-sm mb-5">
+  <h1 class="hcmut-text fw-bold mb-3">Tìm kiếm tài liệu & Dụng cụ học tập</h1>
+  <p class="text-muted mb-4 fs-5">
+    Trao đổi giáo trình, kit vi điều khiển và đồ dùng nhanh chóng cùng cộng đồng
+    sinh viên.
+  </p>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <form
+        method="GET"
+        action="/"
+        class="d-flex bg-white rounded-pill shadow-sm p-1 border"
+      >
+        <div class="input-group">
+          <span class="input-group-text bg-transparent border-0 pe-1">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input
+            type="text"
+            name="q"
+            class="form-control border-0 shadow-none bg-transparent"
+            placeholder="VD: 'Giải Tích', 'Kit vi điều khiển'..."
+            value="{{ search_query }}"
+          />
+          <button
+            type="submit"
+            class="btn hcmut-bg text-white rounded-pill px-4 fw-bold mx-1"
+          >
+            Tìm kiếm
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-4 text-center">
+        <span class="text-muted small me-2">Tìm kiếm phổ biến:</span>
+        <a
+          href="/?q=Giải Tích"
+          class="badge rounded-pill bg-white text-secondary border shadow-sm text-decoration-none px-3 py-2 me-2 item-card"
+          >📖 Giải Tích 1</a
+        >
+        <a
+          href="/?q=Kit"
+          class="badge rounded-pill bg-white text-secondary border shadow-sm text-decoration-none px-3 py-2 me-2 item-card"
+          >🔌 Kit Vi Điều Khiển</a
+        >
+        <a
+          href="/?q=Đại cương"
+          class="badge rounded-pill bg-white text-secondary border shadow-sm text-decoration-none px-3 py-2 item-card"
+          >🎒 Sách Đại Cương</a
+        >
+      </div>
+
+      {% if search_query %}
+      <div class="mt-3 text-center">
+        <a href="/" class="badge bg-secondary text-decoration-none me-2 p-2">
+          Xóa bộ lọc <i class="bi bi-x-circle ms-1"></i>
+        </a>
+        {% if session.user_id %}
+        <form action="/add_alert" method="POST" class="d-inline">
+          <input type="hidden" name="keyword" value="{{ search_query }}" />
+          <button type="submit" class="badge bg-primary border-0 p-2">
+            <i class="bi bi-bell me-1"></i> Theo dõi từ khóa "{{ search_query
+            }}"
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4 g-3 align-items-center">
+  <div class="col-md-8">
+    <div class="d-flex flex-wrap gap-2">
+      <a
+        href="/"
+        class="btn btn-sm {% if not current_cat %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill"
+        >Tất cả</a
+      >
+      {% for cat in ['Sách Đại Cương', 'Sách Chuyên Ngành', 'Linh Kiện Điện Tử',
+      'Dụng Cụ Học Tập', 'Khác'] %}
+      <a
+        href="/?cat={{ cat }}&q={{ search_query }}&sort={{ current_sort }}"
+        class="btn btn-sm {% if current_cat == cat %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill"
+      >
+        {{ cat }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-md-4 text-md-end">
+    <div class="dropdown d-inline-block">
+      <button
+        class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <i class="bi bi-sort-down me-1"></i>
+        {% if current_sort == 'price_asc' %}Giá thấp đến cao {% elif
+        current_sort == 'price_desc' %}Giá cao đến thấp {% else %}Mới nhất{%
+        endif %}
+      </button>
+      <ul class="dropdown-menu shadow border-0">
+        <li>
+          <a
+            class="dropdown-item"
+            href="/?cat={{ current_cat }}&q={{ search_query }}&sort=newest"
+            >Mới nhất</a
+          >
+        </li>
+        <li>
+          <a
+            class="dropdown-item"
+            href="/?cat={{ current_cat }}&q={{ search_query }}&sort=price_asc"
+            >Giá thấp đến cao</a
+          >
+        </li>
+        <li>
+          <a
+            class="dropdown-item"
+            href="/?cat={{ current_cat }}&q={{ search_query }}&sort=price_desc"
+            >Giá cao đến thấp</a
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="fw-bold text-dark m-0">Sản phẩm mới nhất</h3>
+</div>
+
+<div class="row">
+  {% for item in items %}
+  <div class="col-md-4 mb-4">
+    <div class="card h-100 shadow-sm border-0 item-card">
+      <a href="/item/{{ item.id }}" class="text-decoration-none text-dark">
+        {% if item.image_url %}
+        <img
+          src="{{ item.image_url }}"
+          class="card-img-top rounded-top"
+          alt="{{ item.title }}"
+        />
+        {% else %}
+        <div class="no-img-placeholder rounded-top">No Image Provided</div>
+        {% endif %}
+
+        <div class="card-body">
+          <span class="badge bg-primary mb-2">{{ item.category }}</span>
+          <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
+          <h6 class="card-subtitle mb-3 text-danger fw-bold">
+            {{ item.price }} VND
+          </h6>
+        </div>
+      </a>
+
+      <div
+        class="card-footer bg-white border-top-0 text-muted d-flex justify-content-between align-items-center mb-2"
+      >
+        <small>User ID: {{ item.user_id }}</small>
+        {% if session.user_id %} {% if session.user_id == item.user_id %}
+        <form action="/delete/{{ item.id }}" method="POST" class="m-0">
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            Đã bán
+          </button>
+        </form>
+        {% else %}
+        <form action="/wishlist/add/{{ item.id }}" method="POST" class="m-0">
+          <button type="submit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-heart me-1"></i>Lưu
+          </button>
+        </form>
+        {% endif %} {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card border-0 bg-light rounded-4 text-center py-5 shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-box-seam text-muted" style="font-size: 4rem"></i>
+        <h4 class="fw-bold mt-3 text-dark">Chưa có sản phẩm nào!</h4>
+        {% if search_query or current_cat %}
+        <p class="text-muted">
+          Không tìm thấy kết quả nào phù hợp với bộ lọc hiện tại.
+        </p>
+        <a href="/" class="btn btn-outline-primary mt-2 rounded-pill px-4"
+          >Quay lại trang chủ</a
+        >
+        {% else %}
+        <p class="text-muted mb-4">
+          Hiện tại chợ đang trống. Hãy là người đầu tiên đăng bán một món đồ
+          nhé!
+        </p>
+        <a
+          href="/add"
+          class="btn hcmut-bg text-white fw-bold rounded-pill px-4 py-2 shadow-sm"
+        >
+          <i class="bi bi-plus-lg me-1"></i> Đăng bán ngay
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

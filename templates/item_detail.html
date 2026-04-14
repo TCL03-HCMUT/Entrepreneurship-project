@@ -1,0 +1,82 @@
+{% extends "base.html" %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Chợ sinh viên</a></li>
+        <li class="breadcrumb-item active">{{ item.category }}</li>
+      </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+      <div class="row g-0">
+        <div
+          class="col-md-6 bg-light d-flex align-items-center justify-content-center"
+          style="min-height: 400px"
+        >
+          {% if item.image_url %}
+          <img
+            src="{{ item.image_url }}"
+            class="img-fluid"
+            alt="{{ item.title }}"
+            style="max-height: 500px"
+          />
+          {% else %}
+          <div class="text-center text-muted">
+            <i class="bi bi-image" style="font-size: 5rem"></i>
+            <p>Không có hình ảnh</p>
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <div class="card-body p-4 p-lg-5">
+            <span class="badge bg-primary mb-2">{{ item.category }}</span>
+            <h2 class="fw-bold hcmut-text mb-3">{{ item.title }}</h2>
+            <h3 class="text-danger fw-bold mb-4">{{ item.price }} VND</h3>
+
+            <div class="mb-4 py-3 border-top border-bottom">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-light rounded-circle p-3 me-3">
+                  <i class="bi bi-person h4 mb-0"></i>
+                </div>
+                <div>
+                  <p class="text-muted small mb-0">Người đăng bán</p>
+                  <p class="fw-bold mb-0">{{ item.username }}</p>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="bg-light rounded-circle p-3 me-3">
+                  <i class="bi bi-telephone h4 mb-0 text-success"></i>
+                </div>
+                <div>
+                  <p class="text-muted small mb-0">Liên hệ qua</p>
+                  <p class="fw-bold mb-0 text-success">{{ item.contact }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-grid gap-2">
+              {% if session.user_id != item.user_id %}
+              <form action="/wishlist/add/{{ item.id }}" method="POST">
+                <button
+                  type="submit"
+                  class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold"
+                >
+                  <i class="bi bi-heart me-1"></i> Lưu vào Wishlist
+                </button>
+              </form>
+              {% endif %}
+              <a
+                href="tel:{{ item.contact }}"
+                class="btn hcmut-bg text-white w-100 rounded-pill py-2 fw-bold"
+              >
+                Gọi điện ngay
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
