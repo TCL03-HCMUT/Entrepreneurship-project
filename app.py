@@ -1,10 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'hcmut_super_secret_key'
 DATABASE = 'hcmut_market.db'
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- DATABASE SETUP ---
 def get_db():
@@ -24,7 +29,7 @@ def init_db():
         
         db.execute('''CREATE TABLE IF NOT EXISTS items (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, 
-                        category TEXT NOT NULL, price TEXT NOT NULL, contact TEXT NOT NULL, 
+                        category TEXT NOT NULL, price TEXT NOT NULL, description TEXT, contact TEXT NOT NULL, 
                         image_url TEXT, user_id INTEGER, 
                         FOREIGN KEY(user_id) REFERENCES users(id))''')
         
@@ -103,17 +108,17 @@ def register():
         password = request.form['password']
         
         if not email.endswith('@hcmut.edu.vn'):
-            flash('Registration failed: You must use an @hcmut.edu.vn email address.')
+            flash('Đăng ký thất bại: bạn phải dùng email @hcmut.edu.vn.')
             return render_template('register.html')
 
         db = get_db()
         try:
             db.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', (username, email, password))
             db.commit()
-            flash('Registration successful! Please log in.')
+            flash('Đăng ký thành công! Vui lòng đăng nhập.')
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash('Username or Email already exists.')
+            flash('Tên đăng nhập hoặc email đã tồn tại.')
             
     return render_template('register.html')
 
@@ -130,7 +135,7 @@ def login():
             session['is_premium'] = user['is_premium']
             return redirect(url_for('index'))
         else:
-            flash('Invalid credentials.')
+            flash('Tên đăng nhập hoặc mật khẩu không đúng.')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -141,26 +146,34 @@ def logout():
 @app.route('/add', methods=['GET', 'POST'])
 def add_item():
     if 'user_id' not in session:
-        flash('Please login to sell items.')
+        flash('Vui lòng đăng nhập để đăng bán sản phẩm.')
         return redirect(url_for('login'))
 
     db = get_db()
     if session.get('is_premium') == 0:
         item_count = db.execute('SELECT COUNT(*) FROM items WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
         if item_count >= 2:
-            flash('Free tier limit reached (Max 2 items). Please upgrade to Premium!')
+            flash('Bạn đã đạt giới hạn gói miễn phí (tối đa 2 sản phẩm). Vui lòng nâng cấp Premium!')
             return redirect(url_for('index'))
 
     if request.method == 'POST':
         title = request.form['title']
         category = request.form['category']
         price = request.form['price']
-        image_url = request.form['image_url']
         contact = request.form['contact']
-        db.execute('INSERT INTO items (title, category, price, image_url, contact, user_id) VALUES (?, ?, ?, ?, ?, ?)', 
-                   (title, category, price, image_url, contact, session['user_id']))
+        description = request.form.get('description', '')
+        
+        image_url = request.form.get('image_url', '')
+        file = request.files.get('image_file')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_url = url_for('static', filename='uploads/' + filename)
+            
+        db.execute('INSERT INTO items (title, category, price, description, image_url, contact, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                   (title, category, price, description, image_url, contact, session['user_id']))
         db.commit()
-        flash('Item listed successfully!')
+        flash('Đã đăng sản phẩm thành công!')
         return redirect(url_for('index'))
     return render_template('add_item.html')
 
@@ -194,7 +207,7 @@ def view_wishlist():
 @app.route('/wishlist/add/<int:item_id>', methods=['POST'])
 def add_to_wishlist(item_id):
     if 'user_id' not in session:
-        flash('Please login to use the wishlist.')
+        flash('Vui lòng đăng nhập để sử dụng danh sách yêu thích.')
         return redirect(url_for('login'))
         
     db = get_db()
@@ -202,15 +215,15 @@ def add_to_wishlist(item_id):
     if session.get('is_premium') == 0:
         count = db.execute('SELECT COUNT(*) FROM wishlist WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
         if count >= 5:
-            flash('Free tier limit reached (Max 5 wishlist items). Upgrade to Premium to save more!')
+            flash('Bạn đã đạt giới hạn gói miễn phí (tối đa 5 sản phẩm yêu thích). Nâng cấp Premium để lưu nhiều hơn!')
             return redirect(request.referrer or url_for('index'))
             
     try:
         db.execute('INSERT INTO wishlist (user_id, item_id) VALUES (?, ?)', (session['user_id'], item_id))
         db.commit()
-        flash('Item added to wishlist!')
+        flash('Đã thêm sản phẩm vào danh sách yêu thích!')
     except sqlite3.IntegrityError:
-        flash('Item is already in your wishlist.')
+        flash('Sản phẩm đã có trong danh sách yêu thích của bạn.')
         
     return redirect(request.referrer or url_for('index'))
 
@@ -222,7 +235,7 @@ def remove_from_wishlist(item_id):
     db = get_db()
     db.execute('DELETE FROM wishlist WHERE user_id = ? AND item_id = ?', (session['user_id'], item_id))
     db.commit()
-    flash('Item removed from wishlist.')
+    flash('Đã xóa sản phẩm khỏi danh sách yêu thích.')
     
     return redirect(request.referrer or url_for('view_wishlist'))
 
@@ -237,12 +250,12 @@ def add_alert():
     if session.get('is_premium') == 0:
         count = db.execute('SELECT COUNT(*) FROM alerts WHERE user_id = ?', (session['user_id'],)).fetchone()[0]
         if count >= 1:
-            flash('Free tier limit reached (Max 1 tracked keyword). Please upgrade to Premium!')
+            flash('Bạn đã đạt giới hạn gói miễn phí (tối đa 1 từ khóa theo dõi). Vui lòng nâng cấp Premium!')
             return redirect(request.referrer or url_for('index'))
             
     db.execute('INSERT INTO alerts (user_id, keyword) VALUES (?, ?)', (session['user_id'], keyword))
     db.commit()
-    flash(f'Now tracking keyword: "{keyword}"')
+    flash(f'Đang theo dõi từ khóa: "{keyword}"')
     
     return redirect(request.referrer or url_for('view_wishlist'))
 
@@ -254,7 +267,7 @@ def remove_alert(alert_id):
     db = get_db()
     db.execute('DELETE FROM alerts WHERE id = ? AND user_id = ?', (alert_id, session['user_id']))
     db.commit()
-    flash('Tracked keyword removed.')
+    flash('Đã xóa từ khóa theo dõi.')
     return redirect(request.referrer or url_for('view_wishlist'))
 
 @app.route('/upgrade')
@@ -265,7 +278,7 @@ def upgrade():
     db.execute('UPDATE users SET is_premium = 1 WHERE id = ?', (session['user_id'],))
     db.commit()
     session['is_premium'] = 1
-    flash('You are now a Premium user.')
+    flash('Bạn đã trở thành người dùng Premium.')
     return redirect(url_for('index'))
 
 @app.route('/delete/<int:item_id>', methods=['POST'])
@@ -276,8 +289,25 @@ def delete_item(item_id):
     db.execute('DELETE FROM items WHERE id = ? AND user_id = ?', (item_id, session['user_id']))
     db.execute('DELETE FROM wishlist WHERE item_id = ?', (item_id,))
     db.commit()
-    flash('Item removed.')
+    flash('Đã xóa sản phẩm.')
     return redirect(url_for('index'))
+
+@app.route('/item/<int:item_id>')
+def item_detail(item_id):
+    db = get_db()
+    # Lấy thông tin sản phẩm và tên người bán
+    item = db.execute('''
+        SELECT i.*, u.username 
+        FROM items i 
+        LEFT JOIN users u ON i.user_id = u.id 
+        WHERE i.id = ?
+    ''', (item_id,)).fetchone()
+    
+    if not item:
+        flash("Không tìm thấy sản phẩm.")
+        return redirect(url_for('index'))
+        
+    return render_template('item_detail.html', item=item)
 
 if __name__ == '__main__':
     if not os.path.exists(DATABASE):
@@ -302,21 +332,10 @@ if __name__ == '__main__':
                             UNIQUE(user_id, item_id))''')
             db.commit()
             
-    app.run(debug=True)
-
-@app.route('/item/<int:item_id>')
-def item_detail(item_id):
-    db = get_db()
-    # Lấy thông tin sản phẩm và tên người bán
-    item = db.execute('''
-        SELECT i.*, u.username 
-        FROM items i 
-        JOIN users u ON i.user_id = u.id 
-        WHERE i.id = ?
-    ''', (item_id,)).fetchone()
-    
-    if not item:
-        flash("Không tìm thấy sản phẩm.")
-        return redirect(url_for('index'))
-        
-    return render_template('item_detail.html', item=item)
+        try:
+            db.execute('SELECT description FROM items LIMIT 1')
+        except sqlite3.OperationalError:
+            db.execute('ALTER TABLE items ADD COLUMN description TEXT')
+            db.commit()
+            
+    app.run(host='0.0.0.0', port=5000, debug=True)

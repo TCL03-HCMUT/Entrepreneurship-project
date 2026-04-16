@@ -1,8 +1,7 @@
 {% extends "base.html" %} {% block content %} {% if notifications %}
 <div class="alert alert-success shadow-sm border-0 mb-4 rounded-3">
   <h6 class="fw-bold mb-2">
-    <i class="bi bi-bell-fill me-2"></i>Wishlist Keyword Matches Found!
-  </h6>
+    <i class="bi bi-bell-fill me-2"></i>Đã tìm thấy thông báo từ khóa!</n  </h6>
   <ul class="mb-0">
     {% for note in notifications %}
     <li>{{ note }}</li>
@@ -160,22 +159,25 @@
           alt="{{ item.title }}"
         />
         {% else %}
-        <div class="no-img-placeholder rounded-top">No Image Provided</div>
+        <div class="no-img-placeholder rounded-top">Chưa có hình ảnh</div>
         {% endif %}
 
         <div class="card-body">
           <span class="badge bg-primary mb-2">{{ item.category }}</span>
           <h5 class="card-title hcmut-text fw-bold">{{ item.title }}</h5>
-          <h6 class="card-subtitle mb-3 text-danger fw-bold">
+          <h6 class="card-subtitle mb-2 text-danger fw-bold">
             {{ item.price }} VND
           </h6>
+          <p class="card-text small text-muted mb-0 text-truncate">
+            <i class="bi bi-person-lines-fill me-1"></i> {{ item.contact }}
+          </p>
         </div>
       </a>
 
       <div
         class="card-footer bg-white border-top-0 text-muted d-flex justify-content-between align-items-center mb-2"
       >
-        <small>User ID: {{ item.user_id }}</small>
+        <small>Người đăng: {{ item.user_id }}</small>
         {% if session.user_id %} {% if session.user_id == item.user_id %}
         <form action="/delete/{{ item.id }}" method="POST" class="m-0">
           <button type="submit" class="btn btn-sm btn-outline-danger">

@@ -34,6 +34,11 @@
             <h2 class="fw-bold hcmut-text mb-3">{{ item.title }}</h2>
             <h3 class="text-danger fw-bold mb-4">{{ item.price }} VND</h3>
 
+            {% if item.description %}
+            <h5 class="fw-bold fs-6">Mô tả sản phẩm</h5>
+            <p class="text-muted mb-4" style="white-space: pre-wrap;">{{ item.description }}</p>
+            {% endif %}
+
             <div class="mb-4 py-3 border-top border-bottom">
               <div class="d-flex align-items-center mb-3">
                 <div class="bg-light rounded-circle p-3 me-3">
@@ -41,7 +46,7 @@
                 </div>
                 <div>
                   <p class="text-muted small mb-0">Người đăng bán</p>
-                  <p class="fw-bold mb-0">{{ item.username }}</p>
+                  <p class="fw-bold mb-0">{{ item.username or 'Người dùng ẩn danh' }}</p>
                 </div>
               </div>
               <div class="d-flex align-items-center">
@@ -49,8 +54,8 @@
                   <i class="bi bi-telephone h4 mb-0 text-success"></i>
                 </div>
                 <div>
-                  <p class="text-muted small mb-0">Liên hệ qua</p>
-                  <p class="fw-bold mb-0 text-success">{{ item.contact }}</p>
+                  <p class="text-muted small mb-0">Thông tin liên hệ</p>
+                  <p class="fw-bold mb-0 text-success" style="word-break: break-all;">{{ item.contact }}</p>
                 </div>
               </div>
             </div>
@@ -62,15 +67,16 @@
                   type="submit"
                   class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold"
                 >
-                  <i class="bi bi-heart me-1"></i> Lưu vào Wishlist
+                  <i class="bi bi-heart me-1"></i> Lưu vào Yêu thích
                 </button>
               </form>
               {% endif %}
               <a
-                href="tel:{{ item.contact }}"
+                href="{% if 'http' in item.contact %}{{ item.contact }}{% else %}tel:{{ item.contact }}{% endif %}"
+                target="_blank"
                 class="btn hcmut-bg text-white w-100 rounded-pill py-2 fw-bold"
               >
-                Gọi điện ngay
+                Liên hệ ngay
               </a>
             </div>
           </div>
